@@ -1,5 +1,6 @@
+
 import { GoogleGenAI, Type } from "@google/genai";
-import { StudyMaterials } from '../types';
+import { StudyMaterials, MindMapNode } from '../types';
 
 if (!process.env.API_KEY) {
     throw new Error("API_KEY environment variable not set");
@@ -7,6 +8,24 @@ if (!process.env.API_KEY) {
 
 // Fix: Initialize GoogleGenAI with process.env.API_KEY directly as per guidelines.
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+
+const mindMapNodeSchema: any = {
+    type: Type.OBJECT,
+    properties: {
+        topic: {
+            type: Type.STRING,
+            description: "The central idea or concept of this node.",
+        },
+    },
+    required: ["topic"],
+};
+
+mindMapNodeSchema.properties.children = {
+    type: Type.ARRAY,
+    description: "An array of child nodes, representing sub-topics.",
+    items: mindMapNodeSchema,
+};
+
 
 const studyMaterialsSchema = {
     type: Type.OBJECT,
@@ -58,14 +77,18 @@ const studyMaterialsSchema = {
                 required: ["question", "options", "correctAnswer"],
             },
         },
+        mindMap: {
+            ...mindMapNodeSchema,
+            description: "A hierarchical mind map of the topic, starting with a central root node. It should have a depth of at least 3 levels where appropriate.",
+        }
     },
-    required: ["summary", "flashcards", "quiz"],
+    required: ["summary", "flashcards", "quiz", "mindMap"],
 };
 
 
 export const generateStudyMaterials = async (topic: string): Promise<StudyMaterials> => {
     try {
-        const prompt = `Generate a comprehensive set of study materials for the topic: "${topic}". Please provide a detailed summary, a list of flashcards, and a multiple-choice quiz.`;
+        const prompt = `Generate a comprehensive set of study materials for the topic: "${topic}". Please provide a detailed summary, a list of flashcards, a multiple-choice quiz, and a hierarchical mind map.`;
         
         const response = await ai.models.generateContent({
             model: "gemini-2.5-flash",
@@ -80,7 +103,7 @@ export const generateStudyMaterials = async (topic: string): Promise<StudyMateri
         const parsedData = JSON.parse(jsonText);
         
         // Basic validation
-        if (!parsedData.summary || !parsedData.flashcards || !parsedData.quiz) {
+        if (!parsedData.summary || !parsedData.flashcards || !parsedData.quiz || !parsedData.mindMap) {
             throw new Error("Received incomplete study materials from the API.");
         }
 

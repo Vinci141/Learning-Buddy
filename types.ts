@@ -10,10 +10,16 @@ export interface QuizQuestion {
   correctAnswer: string;
 }
 
+export interface MindMapNode {
+  topic: string;
+  children?: MindMapNode[];
+}
+
 export interface StudyMaterials {
   summary: string;
   flashcards: Flashcard[];
   quiz: QuizQuestion[];
+  mindMap: MindMapNode;
 }
 
-export type Tab = 'summary' | 'flashcards' | 'quiz';
+export type Tab = 'summary' | 'flashcards' | 'quiz' | 'mindmap';

@@ -1,6 +1,7 @@
+
 import React from 'react';
 import { Tab } from '../types';
-import { SummaryIcon, FlashcardIcon, QuizIcon } from './icons';
+import { SummaryIcon, FlashcardIcon, QuizIcon, MindMapIcon } from './icons';
 
 interface StudyTabsProps {
   activeTab: Tab;
@@ -13,6 +14,7 @@ const StudyTabs: React.FC<StudyTabsProps> = ({ activeTab, setActiveTab }) => {
     { id: 'summary', label: 'Summary', icon: <SummaryIcon /> },
     { id: 'flashcards', label: 'Flashcards', icon: <FlashcardIcon /> },
     { id: 'quiz', label: 'Quiz', icon: <QuizIcon /> },
+    { id: 'mindmap', label: 'Mind Map', icon: <MindMapIcon /> },
   ];
 
   return (

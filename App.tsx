@@ -7,6 +7,7 @@ import StudyTabs from './components/StudyTabs';
 import SummaryView from './components/SummaryView';
 import FlashcardView from './components/FlashcardView';
 import QuizView from './components/QuizView';
+import MindMapView from './components/MindMapView';
 import Loader from './components/Loader';
 import ErrorMessage from './components/ErrorMessage';
 import ExportButtons from './components/ExportButtons';
@@ -94,6 +95,8 @@ const App: React.FC = () => {
             onAnswerChange={setQuizAnswers}
           />
         );
+      case 'mindmap':
+        return <MindMapView mindMap={studyMaterials.mindMap} />;
       default:
         return null;
     }
@@ -102,7 +105,7 @@ const App: React.FC = () => {
   const WelcomeMessage: React.FC = () => (
     <div className="text-center p-8 bg-white rounded-xl shadow-md">
       <h2 className="text-2xl font-bold text-slate-700 mb-2">Welcome to your Learning Buddy!</h2>
-      <p className="text-slate-500">Enter a topic above to generate a summary, flashcards, and a quiz to kickstart your study session.</p>
+      <p className="text-slate-500">Enter a topic above to generate a summary, flashcards, a quiz, and a mind map to kickstart your study session.</p>
     </div>
   );
 
