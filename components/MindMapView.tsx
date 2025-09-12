@@ -13,59 +13,64 @@ interface LayoutNode {
   node: MindMapNode;
   children: LayoutNode[];
   parent: LayoutNode | null;
-  x: number;
-  y: number;
-  modifier: number; // Offset to be applied to the node and its children
-  thread?: LayoutNode; // Link to the next node on the contour
-  width: number;
+  x: number;      // Relative x position to its parent
+  y: number;      // Absolute y position
+  finalX: number; // Final absolute x position after all calculations
+  width: number;  // The width of the entire subtree rooted at this node
   height: number;
 }
 
-// --- Reingold-Tilford Algorithm Implementation ---
+// --- New, Robust Tree Layout Algorithm ---
 
 /**
- * A simplified implementation of the Reingold-Tilford algorithm for creating tidy tree layouts.
- * It works in two passes:
- * 1. firstWalk (post-order traversal): Calculates initial positions and modifiers to avoid subtree conflicts.
- * 2. secondWalk (pre-order traversal): Applies the modifiers to calculate the final node positions.
+ * Calculates the layout for a tree structure in two passes.
+ * 1. A post-order traversal (firstWalk) to determine the relative position of nodes.
+ * 2. A pre-order traversal (secondWalk) to calculate the final absolute coordinates.
  */
-function buchheim(root: MindMapNode): { nodes: LayoutNode[]; width: number; height: number } {
+function simpleTreeLayout(root: MindMapNode): { nodes: LayoutNode[]; width: number; height: number } {
   const layoutRoot = buildLayoutTree(root);
   firstWalk(layoutRoot);
-  const { minX, maxX, maxY } = secondWalk(layoutRoot, 0, 0, { minX: 0, maxX: 0, maxY: 0 });
+  const { minX, maxX, maxY } = secondWalk(layoutRoot, 0, { minX: 0, maxX: 0, maxY: 0 });
 
   const nodes: LayoutNode[] = [];
   const queue = [layoutRoot];
   while (queue.length > 0) {
     const node = queue.shift()!;
-    // Adjust coordinates to be positive and add padding
-    node.x = node.x - minX + padding;
+    // Normalize coordinates to be positive and add padding
+    node.finalX = node.finalX - minX + padding;
     node.y = node.y + padding;
     nodes.push(node);
     queue.push(...node.children);
   }
 
   const width = maxX - minX + padding * 2;
-  const height = maxY + padding * 2;
+  const height = maxY + nodeHeight + padding * 2;
 
   return { nodes, width, height };
 }
 
-function buildLayoutTree(node: MindMapNode, parent: LayoutNode | null = null): LayoutNode {
+/**
+ * Builds the initial tree structure used by the layout algorithm.
+ */
+function buildLayoutTree(node: MindMapNode, parent: LayoutNode | null = null, depth: number = 0): LayoutNode {
   const layoutNode: LayoutNode = {
     node,
     parent,
     children: [],
     x: 0,
-    y: 0,
-    modifier: 0,
+    y: depth * (nodeHeight + verticalGap),
     width: nodeWidth,
     height: nodeHeight,
+    finalX: 0,
   };
-  layoutNode.children = (node.children || []).map(child => buildLayoutTree(child, layoutNode));
+  layoutNode.children = (node.children || []).map(child => buildLayoutTree(child, layoutNode, depth + 1));
   return layoutNode;
 }
 
+/**
+ * Post-order traversal to set initial X positions relative to the parent.
+ * This ensures that subtrees do not overlap.
+ */
 function firstWalk(node: LayoutNode) {
   if (node.children.length === 0) {
     return;
@@ -73,93 +78,33 @@ function firstWalk(node: LayoutNode) {
 
   node.children.forEach(firstWalk);
 
-  let defaultAncestor = node.children[0];
+  // Position children relative to the parent node
+  const totalChildrenWidth = node.children.reduce((acc, child) => acc + child.width, 0) + (node.children.length - 1) * horizontalGap;
+  
+  let currentX = -totalChildrenWidth / 2;
   for (const child of node.children) {
-    apportion(child, defaultAncestor);
-    defaultAncestor = nextRight(child);
+    child.x = currentX + child.width / 2;
+    currentX += child.width + horizontalGap;
   }
-
-  executeShifts(node);
-
-  const midpoint = (node.children[0].x + node.children[node.children.length - 1].x) / 2;
   
-  // Center parent over children
-  const leftChild = node.children[0];
-  const rightChild = node.children[node.children.length - 1];
-  
-  let shift = midpoint - (rightChild.x - leftChild.x) / 2;
-  if(node.parent) {
-      const sibling = getLeftSibling(node);
-      if(sibling) {
-          const desiredSeparation = nodeWidth + horizontalGap;
-          const currentSeparation = node.x - sibling.x;
-          if(currentSeparation < desiredSeparation) {
-               node.modifier += desiredSeparation - currentSeparation;
-          }
-      }
-  }
-
-
-  node.x = midpoint;
+  node.width = Math.max(nodeWidth, totalChildrenWidth);
 }
 
-function apportion(node: LayoutNode, defaultAncestor: LayoutNode) {
-    const leftSibling = getLeftSibling(node);
-    if(leftSibling) {
-        let contourRight = node;
-        let contourLeft = leftSibling;
-        let contourInnerRight = nextRight(contourRight);
-        let contourInnerLeft = nextLeft(contourLeft);
-        let shift = 0;
-        while(contourInnerLeft && contourInnerRight) {
-             const distance = (contourLeft.x + shift) - contourRight.x;
-             if(distance + nodeWidth + horizontalGap > 0) {
-                 shift += distance + nodeWidth + horizontalGap;
-             }
-             contourRight = nextRight(contourRight);
-             contourLeft = nextLeft(contourLeft);
-             if(!contourRight || !contourLeft) break;
-             contourInnerRight = nextRight(contourRight);
-             contourInnerLeft = nextLeft(contourLeft);
-        }
-        if(shift > 0) {
-            let ancestor = node;
-            while(ancestor && ancestor !== defaultAncestor) {
-                ancestor.x += shift;
-                ancestor.modifier += shift;
-                ancestor = ancestor.parent!;
-            }
-        }
-    }
-}
+/**
+ * Pre-order traversal to calculate the final absolute X position for each node.
+ */
+function secondWalk(node: LayoutNode, parentX: number, bounds: { minX: number, maxX: number, maxY: number }) {
+  node.finalX = parentX + node.x;
 
-function executeShifts(node: LayoutNode) {
-    let shift = 0, change = 0;
-    for (let i = node.children.length - 1; i >= 0; i--) {
-        const child = node.children[i];
-        child.x += shift;
-        child.modifier += shift;
-        change += child.modifier;
-        shift += child.modifier + change;
-    }
-}
+  // Update overall bounds of the drawing
+  bounds.minX = Math.min(bounds.minX, node.finalX - nodeWidth / 2);
+  bounds.maxX = Math.max(bounds.maxX, node.finalX + nodeWidth / 2);
+  bounds.maxY = Math.max(bounds.maxY, node.y);
 
-
-function secondWalk(node: LayoutNode, mod: number, depth: number, bounds: { minX: number, maxX: number, maxY: number }) {
-  node.x += mod;
-  node.y = depth * (nodeHeight + verticalGap);
-
-  bounds.minX = Math.min(bounds.minX, node.x);
-  bounds.maxX = Math.max(bounds.maxX, node.x + nodeWidth);
-  bounds.maxY = Math.max(bounds.maxY, node.y + nodeHeight);
-
-  node.children.forEach(child => secondWalk(child, mod + node.modifier, depth + 1, bounds));
+  node.children.forEach(child => secondWalk(child, node.finalX, bounds));
   return bounds;
 }
 
-const getLeftSibling = (node: LayoutNode) => node.parent?.children.find((_, i) => node.parent!.children[i+1] === node) || null;
-const nextRight = (node: LayoutNode) => node.children?.[node.children.length - 1] ?? node.thread;
-const nextLeft = (node: LayoutNode) => node.children?.[0] ?? node.thread;
 
 // --- React Component ---
 
@@ -171,7 +116,7 @@ const MindMapView: React.FC<{ mindMap: MindMapNode }> = ({ mindMap }) => {
 
   const { nodes: nodePositions, width: totalWidth, height: totalHeight } = useMemo(() => {
     if (!mindMap) return { nodes: [], width: 0, height: 0 };
-    return buchheim(mindMap);
+    return simpleTreeLayout(mindMap);
   }, [mindMap]);
 
   if (!mindMap) {
@@ -183,9 +128,9 @@ const MindMapView: React.FC<{ mindMap: MindMapNode }> = ({ mindMap }) => {
     nodePositions.forEach(parentPos => {
       parentPos.children.forEach(childNode => {
         result.push({
-          x1: parentPos.x + parentPos.width / 2,
+          x1: parentPos.finalX,
           y1: parentPos.y + parentPos.height,
-          x2: childNode.x + childNode.width / 2,
+          x2: childNode.finalX,
           y2: childNode.y,
         });
       });
@@ -258,18 +203,17 @@ const MindMapView: React.FC<{ mindMap: MindMapNode }> = ({ mindMap }) => {
                         fill="none"
                     />
                 ))}
-                {nodePositions.map(({ x, y, width, height, node }, index) => (
-                    <g key={index} transform={`translate(${x}, ${y})`}>
+                {nodePositions.map(({ finalX, y, node }, index) => (
+                    <g key={index} transform={`translate(${finalX - nodeWidth / 2}, ${y})`}>
                         <rect
-                            width={width}
-                            height={height}
+                            width={nodeWidth}
+                            height={nodeHeight}
                             rx="8"
                             fill="#f8fafc"
                             stroke="#cbd5e1"
                             strokeWidth="1.5"
                         />
-                         <foreignObject x="5" y="5" width={width - 10} height={height - 10}>
-                            {/* Fix: Removed the 'xmlns' attribute from the div as it is not a valid prop for HTML elements in React and causes a TypeScript error. The browser will render it correctly inside a foreignObject without it. */}
+                         <foreignObject x="5" y="5" width={nodeWidth - 10} height={nodeHeight - 10}>
                             <div
                                 style={{
                                     width: '100%',
