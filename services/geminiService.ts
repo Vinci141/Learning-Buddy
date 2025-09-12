@@ -1,6 +1,5 @@
-
 import { GoogleGenAI, Type } from "@google/genai";
-import { StudyMaterials, MindMapNode } from '../types';
+import { StudyMaterials } from '../types';
 
 if (!process.env.API_KEY) {
     throw new Error("API_KEY environment variable not set");
@@ -9,23 +8,38 @@ if (!process.env.API_KEY) {
 // Fix: Initialize GoogleGenAI with process.env.API_KEY directly as per guidelines.
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
-const mindMapNodeSchema: any = {
-    type: Type.OBJECT,
-    properties: {
-        topic: {
-            type: Type.STRING,
-            description: "The central idea or concept of this node.",
+// --- FIX for "Maximum call stack size exceeded" error ---
+// The original recursive schema definition created a circular object reference in JavaScript,
+// which caused a stack overflow inside the Gemini SDK's internal processing.
+// To fix this, we define the schema using a recursive function that builds a nested object
+// with a limited depth. This avoids the circular reference while still allowing for a
+// reasonably complex mind map structure (up to 5 levels deep).
+
+const createMindMapSchema = (depth: number): any => {
+    const schema = {
+        type: Type.OBJECT,
+        properties: {
+            topic: {
+                type: Type.STRING,
+                description: "The central idea or concept of this node.",
+            },
         },
-    },
-    required: ["topic"],
+        required: ["topic"],
+    };
+
+    if (depth > 0) {
+        (schema.properties as any).children = {
+            type: Type.ARRAY,
+            description: "An array of child nodes, representing sub-topics.",
+            items: createMindMapSchema(depth - 1),
+        };
+    }
+
+    return schema;
 };
 
-mindMapNodeSchema.properties.children = {
-    type: Type.ARRAY,
-    description: "An array of child nodes, representing sub-topics.",
-    items: mindMapNodeSchema,
-};
-
+// Using a depth of 4 allows for 5 levels of nodes (root + 4 children levels)
+const mindMapSchema = createMindMapSchema(4);
 
 const studyMaterialsSchema = {
     type: Type.OBJECT,
@@ -78,7 +92,7 @@ const studyMaterialsSchema = {
             },
         },
         mindMap: {
-            ...mindMapNodeSchema,
+            ...mindMapSchema,
             description: "A hierarchical mind map of the topic, starting with a central root node. It should have a depth of at least 3 levels where appropriate.",
         }
     },
