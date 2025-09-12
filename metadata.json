@@ -1,0 +1,5 @@
+{
+  "name": "Learning Buddy",
+  "description": "An AI-powered study assistant that generates flashcards, quizzes, and summaries from any topic to accelerate your learning. Includes options to export materials for offline study.",
+  "requestFramePermissions": []
+}
