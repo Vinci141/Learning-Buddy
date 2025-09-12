@@ -1,4 +1,3 @@
-
 import { StudyMaterials } from '../types';
 
 // These are expected to be available globally from the scripts in index.html
@@ -44,7 +43,7 @@ export const exportToDoc = (materials: StudyMaterials, topic: string) => {
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
-  link.download = `${topic.replace(/\s+/g, '_')}_study_guide.doc`;
+  link.download = `${topic.replace(/\s+/g, '_')}_study_materials.doc`;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
@@ -93,56 +92,4 @@ export const exportToPdf = (materials: StudyMaterials, topic: string) => {
   if (y > pageHeight - 40) { doc.addPage(); y = margins.top; }
   doc.setFontSize(14);
   doc.text('Quiz', margins.left, y);
-  y += 8;
-  doc.setFontSize(10);
-  quiz.forEach((q, i) => {
-    if (y > pageHeight - 30) { doc.addPage(); y = margins.top; }
-    const questionText = doc.splitTextToSize(`${i + 1}. ${q.question}`, usableWidth);
-    doc.setFont(undefined, 'bold');
-    doc.text(questionText, margins.left, y);
-    y += (questionText.length * 4) + 2;
-
-    doc.setFont(undefined, 'normal');
-    q.options.forEach(opt => {
-        doc.text(`- ${opt}`, margins.left + 5, y);
-        y += 5;
-    });
-
-    doc.setFont(undefined, 'italic');
-    doc.text(`Answer: ${q.correctAnswer}`, margins.left + 5, y);
-    y += 8;
-    doc.setFont(undefined, 'normal');
-  });
-
-  doc.save(`${topic.replace(/\s+/g, '_')}_study_guide.pdf`);
-};
-
-export const exportToCsv = (materials: StudyMaterials, topic: string) => {
-  const { flashcards, quiz } = materials;
-  
-  let csvContent = "data:text/csv;charset=utf-8,";
-  
-  csvContent += "Type,Value 1,Value 2,Value 3,Value 4,Value 5\r\n";
-  csvContent += `Topic,"${topic}"\r\n\r\n`;
-
-  csvContent += "Flashcards\r\n";
-  csvContent += "Term,Definition\r\n";
-  flashcards.forEach(f => {
-    csvContent += `"${f.term.replace(/"/g, '""')}","${f.definition.replace(/"/g, '""')}"\r\n`;
-  });
-
-  csvContent += "\r\nQuiz\r\n";
-  csvContent += "Question,Option 1,Option 2,Option 3,Option 4,Correct Answer\r\n";
-  quiz.forEach(q => {
-    const row = [q.question, ...q.options, q.correctAnswer];
-    csvContent += row.map(cell => `"${(cell || '').replace(/"/g, '""')}"`).join(',') + "\r\n";
-  });
-
-  const encodedUri = encodeURI(csvContent);
-  const link = document.createElement("a");
-  link.setAttribute("href", encodedUri);
-  link.setAttribute("download", `${topic.replace(/\s+/g, '_')}_study_data.csv`);
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-};
+  y += 
