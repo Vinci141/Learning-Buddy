@@ -1,7 +1,6 @@
-
 import React, { useState, useCallback, useEffect } from 'react';
 import { StudyMaterials, Tab } from './types';
-import { generateStudyMaterials } from './services/geminiService';
+import { generateStudyMaterials, correctSpelling } from './services/geminiService';
 import TopicInput from './components/TopicInput';
 import StudyTabs from './components/StudyTabs';
 import SummaryView from './components/SummaryView';
@@ -64,12 +63,17 @@ const App: React.FC = () => {
     setIsLoading(true);
     setError(null);
     setStudyMaterials(null);
-    setTopic(newTopic);
+    setTopic(newTopic); // Show original topic immediately for responsiveness
     setActiveTab('summary');
     setQuizAnswers({}); // Reset quiz answers for new topic
 
     try {
-      const materials = await generateStudyMaterials(newTopic);
+      // Step 1: Correct spelling for higher quality generation
+      const correctedTopic = await correctSpelling(newTopic);
+      setTopic(correctedTopic); // Update state with the corrected (or original) topic
+
+      // Step 2: Generate materials with the corrected topic
+      const materials = await generateStudyMaterials(correctedTopic);
       setStudyMaterials(materials);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred.';

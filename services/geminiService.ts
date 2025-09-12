@@ -5,15 +5,31 @@ if (!process.env.API_KEY) {
     throw new Error("API_KEY environment variable not set");
 }
 
-// Fix: Initialize GoogleGenAI with process.env.API_KEY directly as per guidelines.
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
-// --- FIX for "Maximum call stack size exceeded" error ---
-// The original recursive schema definition created a circular object reference in JavaScript,
-// which caused a stack overflow inside the Gemini SDK's internal processing.
-// To fix this, we define the schema using a recursive function that builds a nested object
-// with a limited depth. This avoids the circular reference while still allowing for a
-// reasonably complex mind map structure (up to 5 levels deep).
+export const correctSpelling = async (topic: string): Promise<string> => {
+    try {
+        const prompt = `Correct any spelling or grammatical mistakes in the following topic and return only the corrected phrase, with no extra text or explanation. If it's already correct, return it as is. Topic: "${topic}"`;
+
+        const response = await ai.models.generateContent({
+            model: "gemini-2.5-flash",
+            contents: prompt,
+            config: {
+                // Disable thinking for a faster, more direct response
+                thinkingConfig: { thinkingBudget: 0 },
+                // Set a small token limit as we expect a short answer
+                maxOutputTokens: 50,
+            },
+        });
+        
+        // Clean up response text, removing potential quotes
+        const correctedTopic = response.text.trim().replace(/^"|"$/g, '');
+        return correctedTopic || topic; // Fallback to original topic if response is empty
+    } catch (error) {
+        console.error("Spelling correction failed:", error);
+        return topic; // On failure, proceed with the user's original topic
+    }
+};
 
 const createMindMapSchema = (depth: number): any => {
     const schema = {
@@ -38,7 +54,6 @@ const createMindMapSchema = (depth: number): any => {
     return schema;
 };
 
-// Using a depth of 4 allows for 5 levels of nodes (root + 4 children levels)
 const mindMapSchema = createMindMapSchema(4);
 
 const studyMaterialsSchema = {
@@ -46,7 +61,7 @@ const studyMaterialsSchema = {
     properties: {
         summary: {
             type: Type.STRING,
-            description: "A concise, well-structured summary of the topic, formatted with paragraphs. Should be at least 3 paragraphs long.",
+            description: "A concise, well-structured summary of the topic, formatted in Markdown. Use headings (e.g., '### Key Concepts'), bold text for important terms (e.g., '**photosynthesis**'), and bulleted or numbered lists for key points. The summary should be comprehensive and at least 3 paragraphs long.",
         },
         flashcards: {
             type: Type.ARRAY,
@@ -116,7 +131,6 @@ export const generateStudyMaterials = async (topic: string): Promise<StudyMateri
         const jsonText = response.text.trim();
         const parsedData = JSON.parse(jsonText);
         
-        // Basic validation
         if (!parsedData.summary || !parsedData.flashcards || !parsedData.quiz || !parsedData.mindMap) {
             throw new Error("Received incomplete study materials from the API.");
         }
@@ -125,7 +139,6 @@ export const generateStudyMaterials = async (topic: string): Promise<StudyMateri
 
     } catch (error) {
         console.error("Error generating study materials:", error);
-        // Fix: Propagate the original error for more specific feedback in the UI.
         throw error;
     }
 };

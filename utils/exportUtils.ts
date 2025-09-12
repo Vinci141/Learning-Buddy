@@ -1,8 +1,39 @@
-
 import { StudyMaterials, MindMapNode } from '../types';
 
 // These are expected to be available globally from the scripts in index.html
 declare const jspdf: any;
+declare const marked: any; // For Markdown parsing
+
+// --- HELPER FUNCTIONS ---
+
+const stripMarkdown = (markdown: string): string => {
+  if (!markdown) return '';
+  // A simple regex approach to remove common markdown syntax
+  return markdown
+    // Remove headers (e.g., ### Title)
+    .replace(/#{1,6}\s+(.*)/g, '$1')
+    // Remove bold/italic (e.g., **bold**, *italic*)
+    .replace(/(\*\*|__)(.*?)\1/g, '$2')
+    .replace(/(\*|_)(.*?)\1/g, '$2')
+    // Remove lists (e.g., * item, 1. item)
+    .replace(/^\s*[-*+]\s+/gm, '')
+    .replace(/^\s*\d+\.\s+/gm, '')
+    // Remove links but keep the text (e.g., [text](url))
+    .replace(/\[([^\]]+)\]\([^\)]+\)/g, '$1')
+    // Remove blockquotes
+    .replace(/^>\s+/gm, '')
+    // Remove horizontal rules
+    .replace(/^(-{3,}|_{3,}|\*{3,})$/gm, '')
+    .trim();
+};
+
+const markdownToHtml = (markdown: string): string => {
+    if (typeof marked !== 'undefined') {
+        return marked.parse(markdown);
+    }
+    // Basic fallback if marked library isn't loaded
+    return `<p>${markdown.replace(/\n\n/g, '</p><p>').replace(/\n/g, '<br>')}</p>`;
+};
 
 const createMindMapHtml = (node: MindMapNode, level: number = 0): string => {
     let html = `<li>${node.topic}</li>`;
@@ -15,7 +46,7 @@ const createMindMapHtml = (node: MindMapNode, level: number = 0): string => {
 const createHtmlContent = (materials: StudyMaterials, topic: string): string => {
   const { summary, flashcards, quiz, mindMap } = materials;
 
-  const summaryHtml = `<h2>Summary</h2><p>${summary.replace(/\n/g, '<br>')}</p>`;
+  const summaryHtml = `<h2>Summary</h2>${markdownToHtml(summary)}`;
 
   const flashcardsHtml = `<h2>Flashcards</h2><table border="1" style="border-collapse: collapse; width: 100%;"><thead><tr><th style="padding: 8px;">Term</th><th style="padding: 8px;">Definition</th></tr></thead><tbody>${flashcards.map(f => `<tr><td style="padding: 8px;">${f.term}</td><td style="padding: 8px;">${f.definition}</td></tr>`).join('')}</tbody></table>`;
   
@@ -107,7 +138,8 @@ export const exportToPdf = (materials: StudyMaterials, topic: string) => {
   doc.text('Summary', margins.left, y);
   y += 8;
   doc.setFontSize(10);
-  const summaryLines = doc.splitTextToSize(summary, usableWidth);
+  const plainTextSummary = stripMarkdown(summary);
+  const summaryLines = doc.splitTextToSize(plainTextSummary, usableWidth);
   doc.text(summaryLines, margins.left, y);
   y += (summaryLines.length * 5) + 10;
 
@@ -181,7 +213,8 @@ export const exportToCsv = (materials: StudyMaterials, topic: string) => {
 
     // Add Summary
     csvContent += 'Type,Content\r\n';
-    csvContent += `Summary,${escapeCsvCell(summary)}\r\n\r\n`;
+    const plainTextSummary = stripMarkdown(summary);
+    csvContent += `Summary,${escapeCsvCell(plainTextSummary)}\r\n\r\n`;
 
     // Add Flashcards
     csvContent += 'Type,Term,Definition\r\n';
