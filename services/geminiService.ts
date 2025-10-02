@@ -102,8 +102,12 @@ const studyMaterialsSchema = {
                         type: Type.STRING,
                         description: "The correct answer, which must be one of the strings from the 'options' array.",
                     },
+                    explanation: {
+                        type: Type.STRING,
+                        description: "A brief explanation (1-2 sentences) of why the correct answer is correct. This will be shown to the user after they complete the quiz."
+                    }
                 },
-                required: ["question", "options", "correctAnswer"],
+                required: ["question", "options", "correctAnswer", "explanation"],
             },
         },
         mindMap: {
@@ -117,7 +121,7 @@ const studyMaterialsSchema = {
 
 export const generateStudyMaterials = async (topic: string): Promise<StudyMaterials> => {
     try {
-        const prompt = `Generate a comprehensive set of study materials for the topic: "${topic}". Please provide a detailed summary, a list of flashcards, a multiple-choice quiz, and a hierarchical mind map.`;
+        const prompt = `Generate a comprehensive set of study materials for the topic: "${topic}". Please provide a detailed summary, a list of flashcards, a multiple-choice quiz with explanations for each answer, and a hierarchical mind map.`;
         
         const response = await ai.models.generateContent({
             model: "gemini-2.5-flash",

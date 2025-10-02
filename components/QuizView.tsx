@@ -50,6 +50,11 @@ const QuizView: React.FC<QuizViewProps> = ({ quiz, answers, onAnswerChange }) =>
               <p className={`text-sm ${answers[index] === q.correctAnswer ? 'text-green-700' : 'text-red-700'}`}>
                 Correct answer: <span className="font-medium">{q.correctAnswer}</span>
               </p>
+              {q.explanation && (
+                <div className="mt-3 pt-3 border-t border-slate-200/80">
+                  <p className="text-sm text-slate-600 leading-relaxed">{q.explanation}</p>
+                </div>
+              )}
             </div>
           ))}
         </div>
