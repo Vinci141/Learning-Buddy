@@ -61,7 +61,7 @@ const studyMaterialsSchema = {
     properties: {
         summary: {
             type: Type.STRING,
-            description: "A concise, well-structured summary of the topic, formatted in Markdown. Use headings (e.g., '### Key Concepts'), bold text for important terms (e.g., '**photosynthesis**'), and bulleted or numbered lists for key points. The summary should be comprehensive and at least 3 paragraphs long.",
+            description: "A concise, well-structured summary of the topic, formatted in Markdown. Use headings (e.g., '### Key Concepts'), bold text for important terms (e.g., '**photosynthesis**'), and bulleted or numbered lists for key points. Use nested lists with proper indentation for hierarchical information. The summary should be comprehensive and at least 3 paragraphs long.",
         },
         flashcards: {
             type: Type.ARRAY,
@@ -75,7 +75,7 @@ const studyMaterialsSchema = {
                     },
                     definition: {
                         type: Type.STRING,
-                        description: "The detailed definition or answer for the back of the flashcard.",
+                        description: "The detailed definition or answer for the back of the flashcard, can use simple Markdown for formatting like lists or bold text.",
                     },
                 },
                 required: ["term", "definition"],
@@ -104,7 +104,7 @@ const studyMaterialsSchema = {
                     },
                     explanation: {
                         type: Type.STRING,
-                        description: "A brief explanation (1-2 sentences) of why the correct answer is correct. This will be shown to the user after they complete the quiz."
+                        description: "A brief explanation (1-2 sentences) of why the correct answer is correct, formatted in simple Markdown (e.g., bold for emphasis). This will be shown to the user after they complete the quiz."
                     }
                 },
                 required: ["question", "options", "correctAnswer", "explanation"],

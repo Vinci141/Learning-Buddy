@@ -1,6 +1,7 @@
 
 import React, { useState } from 'react';
 import { Flashcard } from '../types';
+import MarkdownRenderer from './MarkdownRenderer';
 
 interface FlashcardViewProps {
   flashcards: Flashcard[];
@@ -43,7 +44,10 @@ const FlashcardView: React.FC<FlashcardViewProps> = ({ flashcards }) => {
           </div>
           {/* Back */}
           <div className="absolute w-full h-full backface-hidden bg-blue-50 border border-blue-200 rounded-xl shadow-lg flex items-center justify-center p-6 cursor-pointer rotate-y-180">
-            <p className="text-lg text-center text-slate-600 leading-relaxed">{currentCard.definition}</p>
+            <MarkdownRenderer 
+              content={currentCard.definition}
+              className="prose prose-lg prose-slate max-w-none text-center"
+            />
           </div>
         </div>
       </div>

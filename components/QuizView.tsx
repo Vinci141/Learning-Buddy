@@ -1,6 +1,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { QuizQuestion } from '../types';
+import MarkdownRenderer from './MarkdownRenderer';
 
 interface QuizViewProps {
   quiz: QuizQuestion[];
@@ -52,7 +53,10 @@ const QuizView: React.FC<QuizViewProps> = ({ quiz, answers, onAnswerChange }) =>
               </p>
               {q.explanation && (
                 <div className="mt-3 pt-3 border-t border-slate-200/80">
-                  <p className="text-sm text-slate-600 leading-relaxed">{q.explanation}</p>
+                  <MarkdownRenderer 
+                    content={q.explanation} 
+                    className="prose prose-sm prose-slate max-w-none leading-relaxed"
+                  />
                 </div>
               )}
             </div>
